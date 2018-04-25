@@ -51,6 +51,8 @@ Layers.prototype.onRemove = function onRemove () {
 
 Layers.prototype._update = function _update () {
   this._allLayersInMap = this._map.getStyle().layers.map((layer) => layer.id)
+  // We do this because we use `indeterminate` checkboxes and nanomorph and
+  // morphdom do not know how to diff these. Performance is fine.
   var parent = this._container.parentNode
   var newContainer = this._render()
   parent.replaceChild(newContainer, this._container)
@@ -73,16 +75,36 @@ Layers.prototype._onClickOverlay = function _onClickOverlay (e) {
   var overlay = this.overlays[+e.currentTarget.getAttribute('value')]
   var isChecked = e.currentTarget.checked
   overlay.ids.forEach(function (id) {
-    if (!map.getLayer(id)) return
-    if (isChecked) map.setLayoutProperty(id, 'visibility', 'visible')
-    else map.setLayoutProperty(id, 'visibility', 'none')
+    if (isChecked) setLayerVisibility(map, id, 'visible')
+    else setLayerVisibility(map, id, 'none')
   })
   this._update()
 }
 
 Layers.prototype._onClickUnderlay = function _onClickUnderlay (e) {
-  var underlay = this.underlays[+e.currentTarget.getAttribute('value')]
+  var map = this._map
+  var idsToHide = this.underlayLayerIds
+  var idsToShow = []
+  var underlayId = e.currentTarget.getAttribute('value')
+  if (underlayId !== 'none') {
+    console.log(underlayId)
+    idsToShow = this.underlays[+underlayId].ids
+    idsToHide = this.underlayLayerIds.filter(id => !idsToShow.includes(id))
+  }
+  idsToHide.forEach(function (id) {
+    setLayerVisibility(map, id, 'none')
+  })
+  idsToShow.forEach(function (id) {
+    setLayerVisibility(map, id, 'visible')
+  })
+  this._update()
+}
 
+function setLayerVisibility (map, layerId, visibility) {
+  if (!map.getLayer(layerId)) return
+  var current = map.getLayoutProperty(layerId, 'visibility')
+  if (current === visibility) return
+  map.setLayoutProperty(layerId, 'visibility', visibility)
 }
 
 function layerIdReduce (acc, layer) {

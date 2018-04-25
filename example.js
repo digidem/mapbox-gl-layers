@@ -5,28 +5,56 @@ var MapboxGLLayers = require('./')
 
 mapboxgl.accessToken = 'pk.eyJ1IjoiZ21hY2xlbm5hbiIsImEiOiJSaWVtd2lRIn0.ASYMZE2HhwkAw4Vt7SavEg'
 
+const bingSource = {
+  type: 'raster',
+  tiles: [
+    'https://ecn.t0.tiles.virtualearth.net/tiles/a{quadkey}.jpeg?g=5869',
+    'https://ecn.t1.tiles.virtualearth.net/tiles/a{quadkey}.jpeg?g=5869',
+    'https://ecn.t2.tiles.virtualearth.net/tiles/a{quadkey}.jpeg?g=5869',
+    'https://ecn.t3.tiles.virtualearth.net/tiles/a{quadkey}.jpeg?g=5869'
+  ],
+  minzoom: 1,
+  maxzoom: 21,
+  tileSize: 256
+}
+
+const bing = {
+  id: 'bing',
+  type: 'raster',
+  source: 'bing',
+  layout: {
+    visibility: 'none'
+  },
+  paint: {
+  }
+}
+
 var mapDiv = document.createElement('div')
 document.body.appendChild(mapDiv)
 
 var map = window.map = new mapboxgl.Map({
   container: mapDiv,
-  style: 'mapbox://styles/mapbox/streets-v9'
+  style: 'mapbox://styles/mapbox/satellite-streets-v9'
 })
 
 map.on('style.load', function () {
-  // defaults to using all layers in the style, grouped as they are
-  // in Mapbox Studio
-  // new MapboxGLLayers({position: 'top-left'}).addTo(map);
+  map.addSource('bing', bingSource)
+  map.addLayer(bing, 'mapbox-mapbox-satellite')
+
+  var overlayIds = map.getStyle().layers.reduce((acc, layer) => {
+    if (layer.type !== 'raster' && layer.type !== 'background') acc.push(layer.id)
+    return acc
+  }, [])
 
   var layersControl = new MapboxGLLayers([{
-    name: 'ALL PARKS',
-    ids: ['national_park', 'park']
+    name: 'Streets',
+    ids: overlayIds
+  }], [{
+    name: 'Mapbox Satellite',
+    ids: ['mapbox-mapbox-satellite']
   }, {
-    name: 'National Parks',
-    ids: ['national_park']
-  }, {
-    name: 'Other parks',
-    ids: ['park']
+    name: 'Bing Satellite',
+    ids: ['bing']
   }])
 
   map.addControl(layersControl)
