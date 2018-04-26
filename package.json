@@ -6,7 +6,7 @@
   "scripts": {
     "start": "budo example.js --live -- -t sheetify",
     "test": "tap 'test/**/*.test.js'",
-    "bundle": "browserify --standalone MapboxGLLayers -g yo-yoify index.js > dist/mapbox-gl-layers.js",
+    "bundle": "browserify --standalone MapboxGLLayers index.js > dist/mapbox-gl-layers.js",
     "docs": "documentation readme -s API"
   },
   "keywords": [
