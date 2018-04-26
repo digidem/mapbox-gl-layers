@@ -14,6 +14,11 @@
     "mapbox-gl",
     "plugin"
   ],
+  "browserify": {
+    "transform": [
+      "sheetify"
+    ]
+  },
   "author": "Anand Thakker <vestibule@anandthakker.net> (http://anandthakker.net/)",
   "license": "MIT",
   "peerDependencies": {
