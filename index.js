@@ -11,8 +11,7 @@ var defaultOptions = {}
  * @param {Object} [options.underlays] Array of background layers (select one)
  * @param {Object} [options.overlays] Array of overlay layers (select multiple)
  * @example
- * (new Layers({ 'National Parks': 'national_park', 'Other Parks': 'parks' }))
- * .addTo(map)
+ * (map.addControl(new Layers({overlays: { 'National Parks': 'national_park', 'Other Parks': 'parks' })}))
  */
 function Layers (options) {
   this.options = Object.assign({}, defaultOptions, options)
