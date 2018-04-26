@@ -46,16 +46,19 @@ map.on('style.load', function () {
     return acc
   }, [])
 
-  var layersControl = new MapboxGLLayers([{
+  var overlays = [{
     name: 'Streets',
     ids: overlayIds
-  }], [{
+  }]
+  var underlays = [{
     name: 'Mapbox Satellite',
     ids: ['mapbox-mapbox-satellite']
   }, {
     name: 'Bing Satellite',
     ids: ['bing']
-  }])
+  }]
+
+  var layersControl = new MapboxGLLayers({overlays, underlays})
 
   map.addControl(layersControl)
 })

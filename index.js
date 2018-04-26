@@ -3,24 +3,21 @@ var renderSelector = require('./lib/selector')
 
 module.exports = Layers
 
-var defaultOptions = {
-  position: 'top-right'
-}
+var defaultOptions = {}
 
 /**
  * Creates a layer toggle control
  * @param {Object} [options]
- * @param {Object} [options.backgrounds] Array of background layers (select one)
+ * @param {Object} [options.underlays] Array of background layers (select one)
  * @param {Object} [options.overlays] Array of overlay layers (select multiple)
- * @param {string} [options.position='top-right'] A string indicating position on the map. Options are `top-right`, `top-left`, `bottom-right`, `bottom-left`.
  * @example
  * (new Layers({ 'National Parks': 'national_park', 'Other Parks': 'parks' }))
  * .addTo(map)
  */
-function Layers (overlays, underlays, options) {
+function Layers (options) {
   this.options = Object.assign({}, defaultOptions, options)
-  this.overlays = (overlays || []).map(addIndexMap)
-  this.underlays = (underlays || []).map(addIndexMap)
+  this.overlays = (this.options.overlays || []).map(addIndexMap)
+  this.underlays = (this.options.underlays || []).map(addIndexMap)
 
   this.overlayLayerIds = this.overlays.reduce(layerIdReduce, [])
   this.underlayLayerIds = this.underlays.reduce(layerIdReduce, [])
