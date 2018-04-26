@@ -17,20 +17,15 @@
   "author": "Anand Thakker <vestibule@anandthakker.net> (http://anandthakker.net/)",
   "license": "MIT",
   "peerDependencies": {
-    "mapbox-gl": "^0.17.0"
+    "mapbox-gl": "^0.44.0"
   },
   "devDependencies": {
     "browserify": "^16.2.0",
     "budo": "^11.2.0",
     "documentation": "^6.3.1",
-    "eslint": "^4.19.1",
-    "eslint-config-standard": "^11.0.0",
-    "eslint-plugin-promise": "^3.7.0",
-    "eslint-plugin-standard": "^3.0.1",
     "mapbox-gl": "^0.44.2",
     "tap": "^11.1.4",
-    "tape": "^4.9.0",
-    "yo-yoify": "^4.3.0"
+    "tape": "^4.9.0"
   },
   "dependencies": {
     "nanohtml": "^1.2.4",
