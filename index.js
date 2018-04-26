@@ -3,13 +3,16 @@ var renderSelector = require('./lib/selector')
 
 module.exports = Layers
 
-var defaultOptions = {}
+var defaultOptions = {
+  onChange: function () {}
+}
 
 /**
  * Creates a layer toggle control
  * @param {Object} [options]
  * @param {Object} [options.underlays] Array of background layers (select one)
  * @param {Object} [options.overlays] Array of overlay layers (select multiple)
+ * @param {Function} [options.onChange] Function called when layer selections are changed
  * @example
  * (map.addControl(new Layers({overlays: { 'National Parks': 'national_park', 'Other Parks': 'parks' })}))
  */
@@ -21,6 +24,7 @@ function Layers (options) {
   this.overlayLayerIds = this.overlays.reduce(layerIdReduce, [])
   this.underlayLayerIds = this.underlays.reduce(layerIdReduce, [])
 
+  this._onChange = this.options.onChange
   this._onClickOverlay = this._onClickOverlay.bind(this)
   this._onClickUnderlay = this._onClickUnderlay.bind(this)
   this._update = this._update.bind(this)
@@ -74,6 +78,7 @@ Layers.prototype._onClickOverlay = function _onClickOverlay (e) {
     if (isChecked) setLayerVisibility(map, id, 'visible')
     else setLayerVisibility(map, id, 'none')
   })
+  this._onChange({overlay, active: isChecked})
   this._update()
 }
 
@@ -81,10 +86,9 @@ Layers.prototype._onClickUnderlay = function _onClickUnderlay (e) {
   var map = this._map
   var idsToHide = this.underlayLayerIds
   var idsToShow = []
-  var underlayId = e.currentTarget.getAttribute('value')
-  if (underlayId !== 'none') {
-    console.log(underlayId)
-    idsToShow = this.underlays[+underlayId].ids
+  var underlay = e.currentTarget.getAttribute('value')
+  if (underlay !== 'none') {
+    idsToShow = this.underlays[+underlay].ids
     idsToHide = this.underlayLayerIds.filter(id => !idsToShow.includes(id))
   }
   idsToHide.forEach(function (id) {
@@ -93,6 +97,7 @@ Layers.prototype._onClickUnderlay = function _onClickUnderlay (e) {
   idsToShow.forEach(function (id) {
     setLayerVisibility(map, id, 'visible')
   })
+  this._onChange({underlay, idsToShow: idsToShow, idsToHide})
   this._update()
 }
 
