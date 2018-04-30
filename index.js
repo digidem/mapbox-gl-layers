@@ -1,143 +1,127 @@
-var yo = require('yo-yo')
-var Control = require('mapbox-gl/js/ui/control/control')
+var state = require('./lib/state')
+var renderSelector = require('./lib/selector')
 
 module.exports = Layers
+
+var defaultOptions = {
+  onChange: function () {}
+}
 
 /**
  * Creates a layer toggle control
  * @param {Object} [options]
- * @param {string} [options.type='multiple'] Selection type: `multiple` to allow independently toggling each layer/group, `single` to only choose one at a time.
- * @param {Object} [options.layers] An object determining which layers to include.  Each key is a display name (what's shown in the UI), and each value is the corresponding layer id in the map style (or an array of layer ids).
- * @param {string} [options.position='top-right'] A string indicating position on the map. Options are `top-right`, `top-left`, `bottom-right`, `bottom-left`.
- * @param {function} [options.onChange] Optional callback called with `{name: dispayName, layerIds: [...], active: true|false }` for the clicked layer
+ * @param {Object} [options.underlays] Array of background layers (select one)
+ * @param {Object} [options.overlays] Array of overlay layers (select multiple)
+ * @param {Function} [options.onChange] Function called when layer selections are changed
  * @example
- * (new Layers({ 'National Parks': 'national_park', 'Other Parks': 'parks' }))
- * .addTo(map)
+ * (map.addControl(new Layers({overlays: { 'National Parks': 'national_park', 'Other Parks': 'parks' })}))
  */
 function Layers (options) {
-  this.options = Object.assign({}, this.options, options)
-  if (options.layers) {
-    // normalize layers to arrays
-    var layers = {}
-    for (var k in this.options.layers) {
-      layers[k] = Array.isArray(this.options.layers[k])
-        ? this.options.layers[k] : [this.options.layers[k]]
-    }
-    this.options.layers = layers
-  }
+  this.options = Object.assign({}, defaultOptions, options)
+  this.overlays = (this.options.overlays || []).map(addIndexMap)
+  this.underlays = (this.options.underlays || []).map(addIndexMap)
 
-  this._onClick = this._onClick.bind(this)
-  this._isActive = this._isActive.bind(this)
-  this._layerExists = this._layerExists.bind(this)
+  this.overlayLayerIds = this.overlays.reduce(layerIdReduce, [])
+  this.underlayLayerIds = this.underlays.reduce(layerIdReduce, [])
+
+  this._onChange = this.options.onChange
+  this._onClickOverlay = this._onClickOverlay.bind(this)
+  this._onClickUnderlay = this._onClickUnderlay.bind(this)
   this._update = this._update.bind(this)
 }
 
-Layers.prototype = Object.create(Control.prototype)
-Layers.prototype.constructor = Layers
-Layers.prototype.options = { position: 'top-right', type: 'multiple' }
 Layers.prototype.onAdd = function onAdd (map) {
   this._map = map
   var style = map.getStyle()
-  this._allLayers = style.layers.map((layer) => layer.id)
-  if (!this.options.layers) {
-    this.options.layers = {}
-
-    // if there's Mapbox Studio metadata available, use any groups we can find
-    var groups = {}
-    if (style.metadata && style.metadata['mapbox:groups']) {
-      groups = style.metadata['mapbox:groups']
-      Object.keys(groups).forEach((g) => { this.options.layers[groups[g].name] = [] })
-    }
-
-    style.layers.forEach((layer) => {
-      var group = layer.metadata ? groups[layer.metadata['mapbox:group']] : null
-      if (layer.metadata && group) {
-        this.options.layers[group.name].push(layer.id)
-      } else {
-        this.options.layers[layer.id] = [layer.id]
-      }
-    })
-  }
+  this._allLayersInMap = style.layers.map((layer) => layer.id)
   this._map.on('style.change', this._update)
   this._map.style.on('layer.remove', this._update)
   this._map.style.on('layer.add', this._update)
-  return this._render()
+  this._container = this._render()
+  return this._container
 }
 
 Layers.prototype.onRemove = function onRemove () {
   this._map.off('style.change', this._update)
   this._map.style.off('layer.remove', this._update)
   this._map.style.off('layer.add', this._update)
+  this._map = null
+  this._container = null
 }
 
 Layers.prototype._update = function _update () {
-  this._allLayers = this._map.getStyle().layers.map((layer) => layer.id)
-  yo.update(this._container, this._render())
+  this._allLayersInMap = this._map.getStyle().layers.map((layer) => layer.id)
+  // We do this because we use `indeterminate` checkboxes and nanomorph and
+  // morphdom do not know how to diff these. Performance is fine.
+  var parent = this._container.parentNode
+  var newContainer = this._render()
+  parent.replaceChild(newContainer, this._container)
+  this._container = newContainer
 }
+
 Layers.prototype._render = function _render () {
-  var layers = this.options.layers
-  var className = 'mapboxgl-ctrl mapboxgl-layers'
-  return yo`
-  <div class="${className}">
-    <ul>
-    ${Object.keys(layers)
-      .filter((name) => layers[name].some(this._layerExists))
-      .map((name) => {
-        var ids = layers[name].filter(this._layerExists)
-        var className = ids.every(this._isActive) ? 'active'
-          : ids.some(this._isActive) ? 'active partially-active'
-          : ''
-        return yo`
-        <li data-layer-name=${name} data-layer-id=${ids.join(',')} class=${className} onclick=${this._onClick}>
-          ${name}
-        </li>`
-      })}
-    </ul>
-  </div>
-  `
+  return renderSelector({
+    overlaysState: state.getOverlaysState(this._map, this.overlays),
+    underlayState: state.getUnderlayState(this._map, this.underlays),
+    overlays: this.overlays.filter(hasLayers(this._allLayersInMap)),
+    underlays: this.underlays.filter(hasLayers(this._allLayersInMap)),
+    onClickOverlay: this._onClickOverlay,
+    onClickUnderlay: this._onClickUnderlay
+  })
 }
 
-Layers.prototype._onClick = function _onClick (e) {
-  var ids = e.currentTarget.getAttribute('data-layer-id').split(',')
-    .filter(this._layerExists)
+Layers.prototype._onClickOverlay = function _onClickOverlay (e) {
+  var map = this._map
+  var overlay = this.overlays[+e.currentTarget.getAttribute('value')]
+  var isChecked = e.currentTarget.checked
+  overlay.ids.forEach(function (id) {
+    if (isChecked) setLayerVisibility(map, id, 'visible')
+    else setLayerVisibility(map, id, 'none')
+  })
+  this._onChange({overlay, active: isChecked})
+  this._update()
+}
 
-  var activated = false
-  if (this.options.type === 'single') {
-    // single selection mode
-    if (this._currentSelection) {
-      this._currentSelection.forEach((id) => {
-        this._map.setLayoutProperty(id, 'visibility', 'none')
-      })
-    }
-    // turn on any layer that IS in the selected group
-    ids.forEach((id) => {
-      this._map.setLayoutProperty(id, 'visibility', 'visible')
-    })
-    this._currentSelection = ids
-    activated = true
-  } else {
-    // 'toggle' mode
-    var visibility = ids.some(this._isActive) ? 'none' : 'visible'
-    ids.forEach((id) => {
-      this._map.setLayoutProperty(id, 'visibility', visibility)
-    })
-    activated = visibility === 'visible'
+Layers.prototype._onClickUnderlay = function _onClickUnderlay (e) {
+  var map = this._map
+  var idsToHide = this.underlayLayerIds
+  var idsToShow = []
+  var underlay = e.currentTarget.getAttribute('value')
+  if (underlay !== 'none') {
+    idsToShow = this.underlays[+underlay].ids
+    idsToHide = this.underlayLayerIds.filter(id => !idsToShow.includes(id))
   }
+  idsToHide.forEach(function (id) {
+    setLayerVisibility(map, id, 'none')
+  })
+  idsToShow.forEach(function (id) {
+    setLayerVisibility(map, id, 'visible')
+  })
+  this._onChange({underlay, idsToShow: idsToShow, idsToHide})
+  this._update()
+}
 
-  if (this.options.onChange) {
-    this.options.onChange({
-      name: e.currentTarget.getAttribute('data-layer-name'),
-      layerIds: ids,
-      active: activated
+function setLayerVisibility (map, layerId, visibility) {
+  if (!map.getLayer(layerId)) return
+  var current = map.getLayoutProperty(layerId, 'visibility')
+  if (current === visibility) return
+  map.setLayoutProperty(layerId, 'visibility', visibility)
+}
+
+function layerIdReduce (acc, layer) {
+  return layer.ids.concat(acc)
+}
+
+function addIndexMap (layer, i) {
+  return Object.assign({}, layer, {
+    index: i
+  })
+}
+
+function hasLayers (layersInMap) {
+  return function (layer) {
+    return layer.ids.some(function (id) {
+      return layersInMap.indexOf(id) > -1
     })
   }
 }
-
-Layers.prototype._isActive = function isActive (id) {
-  return this._map.getLayoutProperty(id, 'visibility') === 'visible'
-}
-
-Layers.prototype._layerExists = function (id) {
-  return this._allLayers.indexOf(id) >= 0
-}
-
