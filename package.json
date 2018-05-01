@@ -1,5 +1,5 @@
 {
-  "name": "mapbox-gl-layers",
+  "name": "@digidem/mapbox-gl-layers",
   "version": "1.2.0",
   "description": "",
   "main": "index.js",
