@@ -17,13 +17,13 @@ Layer toggle for [Mapbox GL JS](https://www.mapbox.com/mapbox-gl-js/)
 ```js
 var Layers = require('mapbox-gl-layers')
 
-new Layers({
+map.addControl(new Layers({
   layers: {
     'ALL PARKS': ['national_park', 'parks'],
     'National Parks': 'national_park',
     'Other Parks': 'parks'
   }
-}).addTo(map) // map is the mapbox gl map instance
+})) // map is the mapbox gl map instance
 ```
 
 ### Standalone script
@@ -40,13 +40,13 @@ And then:
 ```html
 <script>
 map.on('style.load', function () {
-  new MapboxGLLayers({
+  map.addControl(new MapboxGLLayers({
     layers: {
       'ALL PARKS': ['national_park', 'parks'],
       'National Parks': 'national_park',
       'Other Parks': 'parks'
     }
-  }).addTo(map) // map is the mapbox gl map instance
+  })) // map is the mapbox gl map instance
 })
 </script>
 ```
@@ -64,13 +64,6 @@ Creates a layer toggle control
     -   `options.layers` **[Object](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object)=** An object determining which layers to include.  Each key is a display name (what's shown in the UI), and each value is the corresponding layer id in the map style (or an array of layer ids).
     -   `options.position` **[string](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String)=** A string indicating position on the map. Options are `top-right`, `top-left`, `bottom-right`, `bottom-left`. (optional, default `'top-right'`)
     -   `options.onChange` **[function](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/function)=** Optional callback called with `{name: dispayName, layerIds: [...], active: true|false }` for the clicked layer
-
-**Examples**
-
-```javascript
-(new Layers({ 'National Parks': 'national_park', 'Other Parks': 'parks' }))
-.addTo(map)
-```
 
 ## Contributing
 
