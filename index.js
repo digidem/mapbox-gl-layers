@@ -1,5 +1,21 @@
+var html = require('nanohtml')
+var css = require('sheetify')
+
 var state = require('./lib/state')
 var renderSelector = require('./lib/selector')
+var renderButton = require('./lib/icon_button')
+
+var prefix = css`
+  :host {
+    position: relative;
+  }
+  :host > .layer-chooser {
+    top: 0;
+    position: absolute;
+    right: 30px;
+    min-width: 150px;
+  }
+`
 
 module.exports = Layers
 
@@ -49,6 +65,10 @@ Layers.prototype.onRemove = function onRemove () {
   this._container = null
 }
 
+Layers.prototype.getDefaultPosition = function () {
+  return this.options.position
+}
+
 Layers.prototype._update = function _update () {
   this._allLayersInMap = this._map.getStyle().layers.map((layer) => layer.id)
   // We do this because we use `indeterminate` checkboxes and nanomorph and
@@ -60,7 +80,7 @@ Layers.prototype._update = function _update () {
 }
 
 Layers.prototype._render = function _render () {
-  return renderSelector({
+  var layerSelector = renderSelector({
     overlaysState: state.getOverlaysState(this._map, this.overlays),
     underlayState: state.getUnderlayState(this._map, this.underlays),
     overlays: this.overlays.filter(hasLayers(this._allLayersInMap)),
@@ -68,6 +88,17 @@ Layers.prototype._render = function _render () {
     onClickOverlay: this._onClickOverlay,
     onClickUnderlay: this._onClickUnderlay
   })
+  var layerButton = renderButton()
+  return html`
+    <div class="mapboxgl-ctrl ${prefix}">
+      <div class="mapboxgl-ctrl-group">
+        ${layerButton}
+      </div>
+      <div class="layer-chooser">
+        ${layerSelector}
+      </div>
+    </div>
+  `
 }
 
 Layers.prototype._onClickOverlay = function _onClickOverlay (e) {
@@ -78,7 +109,6 @@ Layers.prototype._onClickOverlay = function _onClickOverlay (e) {
     if (isChecked) setLayerVisibility(map, id, 'visible')
     else setLayerVisibility(map, id, 'none')
   })
-  this._onChange({overlay, active: isChecked})
   this._update()
 }
 
@@ -86,9 +116,9 @@ Layers.prototype._onClickUnderlay = function _onClickUnderlay (e) {
   var map = this._map
   var idsToHide = this.underlayLayerIds
   var idsToShow = []
-  var underlay = e.currentTarget.getAttribute('value')
-  if (underlay !== 'none') {
-    idsToShow = this.underlays[+underlay].ids
+  var underlayId = e.currentTarget.getAttribute('value')
+  if (underlayId !== 'none') {
+    idsToShow = this.underlays[+underlayId].ids
     idsToHide = this.underlayLayerIds.filter(id => !idsToShow.includes(id))
   }
   idsToHide.forEach(function (id) {
@@ -97,7 +127,6 @@ Layers.prototype._onClickUnderlay = function _onClickUnderlay (e) {
   idsToShow.forEach(function (id) {
     setLayerVisibility(map, id, 'visible')
   })
-  this._onChange({underlay, idsToShow: idsToShow, idsToHide})
   this._update()
 }
 
