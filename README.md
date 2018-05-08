@@ -16,14 +16,18 @@ Layer toggle for [Mapbox GL JS](https://www.mapbox.com/mapbox-gl-js/)
 
 ```js
 var Layers = require('mapbox-gl-layers')
-
-map.addControl(new Layers({
-  layers: {
-    'ALL PARKS': ['national_park', 'parks'],
-    'National Parks': 'national_park',
-    'Other Parks': 'parks'
-  }
-})) // map is the mapbox gl map instance
+var overlays = [{
+  name: 'Streets',
+  ids: overlayIds
+}]
+var underlays = [{
+  name: 'Mapbox Satellite',
+  ids: ['mapbox-mapbox-satellite']
+}, {
+  name: 'Bing Satellite',
+  ids: ['bing']
+}]
+map.addControl(new Layers({overlays, underlays})) // map is the mapbox gl map instance
 ```
 
 ### Standalone script
@@ -32,23 +36,6 @@ Add to `<head>`:
 
 ```html
 <script src='dist/mapbox-gl-layers.js'></script>
-<link href='dist/mapbox-gl-layers.css' rel='stylesheet' />
-```
-
-And then:
-
-```html
-<script>
-map.on('style.load', function () {
-  map.addControl(new MapboxGLLayers({
-    layers: {
-      'ALL PARKS': ['national_park', 'parks'],
-      'National Parks': 'national_park',
-      'Other Parks': 'parks'
-    }
-  })) // map is the mapbox gl map instance
-})
-</script>
 ```
 
 ## API
